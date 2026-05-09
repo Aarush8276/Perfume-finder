@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import fs from "fs/promises";
-import path from "path";
 
 export async function POST(req) {
   try {
     const { message, state, history } = await req.json();
 
-    // Read the API key from key.txt
-    const keyPath = path.join(process.cwd(), "key.txt");
-    let apiKey = "";
-    try {
-      apiKey = await fs.readFile(keyPath, "utf-8");
-      apiKey = apiKey.trim();
-    } catch (error) {
-      console.error("Error reading key.txt:", error);
-      return NextResponse.json({ reply: "Please save your Gemini API key in the key.txt file.", stateUpdate: {} });
-    }
+    // Read the API key from environment variables
+    const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ reply: "Please save your Gemini API key in the key.txt file.", stateUpdate: {} });
+      console.error("API key not found in environment variables");
+      return NextResponse.json({ reply: "API key is not configured in environment variables.", stateUpdate: {} });
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -77,9 +68,9 @@ Keep responses concise, engaging, and friendly (include an emoji).`;
     console.error("Chat API Error:", error);
     
     // Check if the error is due to a leaked or invalid API key
-    let errorMsg = "Oops, I'm having trouble thinking right now! Please make sure your API key in key.txt is valid.";
+    let errorMsg = "Oops, I'm having trouble thinking right now! Please make sure your API key is valid.";
     if (error.status === 403 || error.message?.includes("PERMISSION_DENIED") || error.message?.includes("leaked")) {
-      errorMsg = "Your API key was reported as leaked or invalid. Please generate a new one from Google AI Studio and update key.txt.";
+      errorMsg = "Your API key was reported as leaked or invalid. Please generate a new one from Google AI Studio and update the environment variable.";
     }
 
     return NextResponse.json({ 
